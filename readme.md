@@ -4,13 +4,18 @@
 
 ```
 $ gather --cmd 'ls -l' --cmd 'cat go.mod'
-1: module github.com/nwehr/gather
-1: 
-1: go 1.18
-0: total 24
-0: -rw-r--r--  1 natewehr  staff    40 Jul 30 14:01 go.mod
-0: -rw-r--r--  1 natewehr  staff  1272 Jul 31 12:54 main.go
-0: -rw-r--r--  1 natewehr  staff   555 Jul 31 18:27 readme.md
+======== /bin/cat ========
+module github.com/nwehr/gather
+
+go 1.18
+exited with code 0
+
+======== /bin/ls ========
+total 24
+-rw-r--r--  1 natewehr  staff    40 Jul 30 14:01 go.mod
+-rw-r--r--  1 natewehr  staff  1932 Aug  2 11:39 main.go
+-rw-r--r--  1 natewehr  staff   751 Jul 31 18:34 readme.md
+exited with code 0
 ```
 
 ## YouTube
