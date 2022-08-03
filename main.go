@@ -31,6 +31,7 @@ type (
 
 var (
 	stdoutchan = make(chan message)
+	done       = make(chan bool)
 )
 
 func main() {
@@ -39,40 +40,46 @@ func main() {
 		return
 	}
 
-	go func() {
-		path := ""
-
-		for msg := range stdoutchan {
-			if msg.path != path {
-				path = msg.path
-				fmt.Printf("\n======== %s ========\n", path)
-			}
-
-			fmt.Printf(msg.format, msg.args...)
-		}
-	}()
-
-	ctx, cancel := context.WithCancel(context.Background())
-
 	cmds := getCommandOptions(os.Args[1:])
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(cmds))
 
+	go func() {
+		path := ""
+
+		for {
+			select {
+			case <-done:
+				return
+			case msg := <-stdoutchan:
+				if msg.path != path {
+					path = msg.path
+					fmt.Printf("\n======== %s ========\n", path)
+				}
+
+				fmt.Printf(msg.format, msg.args...)
+			}
+		}
+	}()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
 	for _, cmd := range cmds {
 		go runCommand(ctx, &wg, cmd)
 	}
 
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt)
+	sig := make(chan os.Signal)
+	signal.Notify(sig, os.Interrupt)
 
 	go func() {
-		<-c
-		fmt.Println("ctrl-c")
+		<-sig
 		cancel()
 	}()
 
 	wg.Wait()
+
+	done <- true
 }
 
 func getCommandOptions(args []string) []cmdOptions {
@@ -158,8 +165,9 @@ func runCommand(ctx context.Context, wg *sync.WaitGroup, opts cmdOptions) {
 
 		err = cmd.Wait()
 		if err != nil {
-			fmt.Printf("%s killed\n", cmd.String())
-			break
+			if err.Error()[:6] == "signal" {
+				break
+			}
 		}
 
 		stdoutchan <- message{
