@@ -2,18 +2,32 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
-type message struct {
-	path   string
-	format string
-	args   []any
-}
+type (
+	message struct {
+		path   string
+		format string
+		args   []any
+	}
+
+	cmdOptions struct {
+		dir        string
+		name       string
+		args       []string
+		retries    int
+		retryDelay int
+	}
+)
 
 var (
 	stdoutchan = make(chan message)
@@ -33,24 +47,41 @@ func main() {
 		}
 	}()
 
-	cmds := getCommands(os.Args[1:])
+	ctx, cancel := context.WithCancel(context.Background())
+
+	cmds := getCommandOptions(os.Args[1:])
 
 	wg := sync.WaitGroup{}
+	wg.Add(len(cmds))
 
 	for _, cmd := range cmds {
-		wg.Add(1)
-		go runCommand(&wg, cmd)
+		go runCommand(ctx, &wg, cmd)
 	}
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		<-c
+		fmt.Println("ctrl-c")
+		cancel()
+	}()
 
 	wg.Wait()
 }
 
-func getCommands(args []string) []*exec.Cmd {
-	cmds := []*exec.Cmd{}
+func getCommandOptions(args []string) []cmdOptions {
+	cmds := []cmdOptions{}
 	dir := ""
+	retries := 0
+	retryDelay := 0
 
 	for i, arg := range args {
 		switch arg {
+		case "--retries":
+			retries, _ = strconv.Atoi(args[i+1])
+		case "--retry-delay":
+			retryDelay, _ = strconv.Atoi(args[i+1])
 		case "--dir":
 			dir = args[i+1]
 		case "--cmd":
@@ -63,38 +94,55 @@ func getCommands(args []string) []*exec.Cmd {
 				args = tokens[1:]
 			}
 
-			cmd := exec.Command(name, args...)
-
-			if dir != "" {
-				cmd.Dir = dir
+			opts := cmdOptions{
+				dir:        dir,
+				name:       name,
+				args:       args,
+				retries:    retries,
+				retryDelay: retryDelay,
 			}
 
-			cmds = append(cmds, cmd)
+			cmds = append(cmds, opts)
 		}
 	}
 
 	return cmds
 }
-func runCommand(wg *sync.WaitGroup, cmd *exec.Cmd) {
+func runCommand(ctx context.Context, wg *sync.WaitGroup, opts cmdOptions) {
 	defer wg.Done()
+	retries := 0
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		fmt.Printf("could not get stdout pipe from %s: %v\n", cmd.String(), err)
-	}
+	for {
+		cmd := exec.CommandContext(ctx, opts.name, opts.args...)
+		cmd.Dir = opts.dir
 
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		fmt.Printf("could not get stdout pipe from %s: %v\n", cmd.String(), err)
-	}
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			fmt.Printf("could not get stdout pipe from %s: %v\n", cmd.String(), err)
+		}
 
-	err = cmd.Start()
-	if err != nil {
-		fmt.Printf("could not start %s: %v\n", cmd.String(), err)
-	}
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			fmt.Printf("could not get stdout pipe from %s: %v\n", cmd.String(), err)
+		}
 
-	go func() {
-		scanner := bufio.NewScanner(stderr)
+		err = cmd.Start()
+		if err != nil {
+			fmt.Printf("could not start %s: %v\n", cmd.String(), err)
+		}
+
+		go func() {
+			scanner := bufio.NewScanner(stderr)
+			for scanner.Scan() {
+				stdoutchan <- message{
+					path:   cmd.Path,
+					format: "%s\n",
+					args:   []any{scanner.Text()},
+				}
+			}
+		}()
+
+		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			stdoutchan <- message{
 				path:   cmd.Path,
@@ -102,22 +150,27 @@ func runCommand(wg *sync.WaitGroup, cmd *exec.Cmd) {
 				args:   []any{scanner.Text()},
 			}
 		}
-	}()
 
-	scanner := bufio.NewScanner(stdout)
-	for scanner.Scan() {
+		err = cmd.Wait()
+		if err != nil {
+			fmt.Printf("%s killed\n", cmd.String())
+			break
+		}
+
 		stdoutchan <- message{
 			path:   cmd.Path,
-			format: "%s\n",
-			args:   []any{scanner.Text()},
+			format: "exited with code %d\n",
+			args:   []any{cmd.ProcessState.ExitCode()},
 		}
-	}
 
-	cmd.Wait()
+		if cmd.ProcessState.ExitCode() == 0 || opts.retries == 0 || opts.retries == retries {
+			break
+		}
 
-	stdoutchan <- message{
-		path:   cmd.Path,
-		format: "exited with code %d\n",
-		args:   []any{cmd.ProcessState.ExitCode()},
+		if opts.retryDelay > 0 {
+			time.Sleep(time.Duration(opts.retryDelay) * time.Millisecond)
+		}
+
+		retries++
 	}
 }
