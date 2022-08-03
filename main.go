@@ -34,6 +34,11 @@ var (
 )
 
 func main() {
+	if len(os.Args) == 1 {
+		showUsage()
+		return
+	}
+
 	go func() {
 		path := ""
 
@@ -173,4 +178,9 @@ func runCommand(ctx context.Context, wg *sync.WaitGroup, opts cmdOptions) {
 
 		retries++
 	}
+}
+
+func showUsage() {
+	fmt.Println("Usage:")
+	fmt.Println("  gather [--retries <retries>] [--retry-delay <delay>] [[--dir <dir>] --cmd <cmd>]...")
 }
