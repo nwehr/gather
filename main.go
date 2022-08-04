@@ -13,6 +13,12 @@ import (
 	"time"
 )
 
+var (
+	branch string
+	commit string
+	built  string
+)
+
 type (
 	message struct {
 		path   string
@@ -130,6 +136,7 @@ func getCommandOptions(ctx context.Context, args []string) []cmdOptions {
 
 func runCommand(wg *sync.WaitGroup, opts cmdOptions, output chan message) {
 	defer wg.Done()
+
 	retries := 0
 
 	for {
@@ -197,6 +204,22 @@ func runCommand(wg *sync.WaitGroup, opts cmdOptions, output chan message) {
 }
 
 func showUsage() {
+	fmt.Println("gather:")
+	fmt.Printf("  version: %s\n", commit)
+	fmt.Printf("  build:   %s\n", built)
+	fmt.Println()
+
+	fmt.Println("Options:")
+	fmt.Println("  --retries <retries>    Optional: Number of times to retry failed cmd")
+	fmt.Println("  --retry-delay <delay>  Optional: Wait time in ms before each retry")
+	fmt.Println("  --dir <dir>            Optional: Working dir of cmd")
+	fmt.Println("  --cmd <cmd>")
+	fmt.Println()
+
 	fmt.Println("Usage:")
-	fmt.Println("  gather [--retries <retries>] [--retry-delay <delay>] [[--dir <dir>] --cmd <cmd>]...")
+	fmt.Println("  gather [options...]")
+	fmt.Println()
+
+	fmt.Println("Examples:")
+	fmt.Println("  gather --cmd 'start_db.sh' --cmd 'start_server.sh'")
 }

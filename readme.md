@@ -18,6 +18,14 @@ total 24
 exited with code 0
 ```
 
+## Install
+
+```
+$ git clone https://github.com/nwehr/gather
+$ cd gather
+$ make install
+```
+
 ## YouTube
 
 I documented the process of building `gather` on youtube. 
