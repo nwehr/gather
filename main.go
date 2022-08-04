@@ -14,7 +14,6 @@ import (
 )
 
 var (
-	branch string
 	commit string
 	built  string
 )
@@ -137,8 +136,6 @@ func getCommandOptions(ctx context.Context, args []string) []cmdOptions {
 func runCommand(wg *sync.WaitGroup, opts cmdOptions, output chan message) {
 	defer wg.Done()
 
-	retries := 0
-
 	for {
 		cmd := exec.CommandContext(opts.ctx, opts.name, opts.args...)
 		cmd.Dir = opts.dir
@@ -191,7 +188,7 @@ func runCommand(wg *sync.WaitGroup, opts cmdOptions, output chan message) {
 			args:   []any{cmd.ProcessState.ExitCode()},
 		}
 
-		if cmd.ProcessState.ExitCode() == 0 || opts.retries == 0 || opts.retries == retries {
+		if cmd.ProcessState.ExitCode() == 0 || opts.retries == 0 {
 			break
 		}
 
@@ -199,7 +196,7 @@ func runCommand(wg *sync.WaitGroup, opts cmdOptions, output chan message) {
 			time.Sleep(time.Duration(opts.retryDelay) * time.Millisecond)
 		}
 
-		retries++
+		opts.retries--
 	}
 }
 
