@@ -22,5 +22,5 @@ exited with code 0
 
 I documented the process of building `gather` on youtube. 
 
-* [#1 Creating your own dev tool in Go!](https://www.youtube.com/watch?v=s8CkL0WU1s0)
-* [#2 Creating your own dev tool in Go!](https://www.youtube.com/watch?v=2FIvfAAPDOg)
+* [#1 gather dev vlog!](https://www.youtube.com/watch?v=s8CkL0WU1s0)
+* [#2 gather dev vlog!](https://www.youtube.com/watch?v=2FIvfAAPDOg)
