@@ -32,7 +32,8 @@ type (
 		retries    int
 		retryDelay int
 
-		ctx context.Context
+		ctx    context.Context
+		output chan message
 	}
 )
 
@@ -47,21 +48,21 @@ func main() {
 
 	go printOutput(output, done)
 
-	ctx, _ := getContext()
-	cmdOptions := getCommandOptions(ctx, os.Args[1:])
+	ctx, _ := getContextWithCancel()
+	cmdOptions := getCommandOptions(ctx, output, os.Args[1:])
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(cmdOptions))
 
 	for _, opts := range cmdOptions {
-		go runCommand(&wg, opts, output)
+		go runCommand(&wg, opts)
 	}
 
 	wg.Wait()
 	done <- true
 }
 
-func getContext() (context.Context, context.CancelFunc) {
+func getContextWithCancel() (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
@@ -74,25 +75,7 @@ func getContext() (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
-func printOutput(output chan message, done chan bool) {
-	path := ""
-
-	for {
-		select {
-		case <-done:
-			return
-		case msg := <-output:
-			if msg.path != path {
-				path = msg.path
-				fmt.Printf("\n======== %s ========\n\n", path)
-			}
-
-			fmt.Printf(msg.format, msg.args...)
-		}
-	}
-}
-
-func getCommandOptions(ctx context.Context, args []string) []cmdOptions {
+func getCommandOptions(ctx context.Context, output chan message, args []string) []cmdOptions {
 	cmds := []cmdOptions{}
 
 	dir := ""
@@ -124,6 +107,7 @@ func getCommandOptions(ctx context.Context, args []string) []cmdOptions {
 				retries:    retries,
 				retryDelay: retryDelay,
 				ctx:        ctx,
+				output:     output,
 			}
 
 			cmds = append(cmds, opts)
@@ -133,7 +117,7 @@ func getCommandOptions(ctx context.Context, args []string) []cmdOptions {
 	return cmds
 }
 
-func runCommand(wg *sync.WaitGroup, opts cmdOptions, output chan message) {
+func runCommand(wg *sync.WaitGroup, opts cmdOptions) {
 	defer wg.Done()
 
 	for {
@@ -158,7 +142,7 @@ func runCommand(wg *sync.WaitGroup, opts cmdOptions, output chan message) {
 		go func() {
 			scanner := bufio.NewScanner(stderr)
 			for scanner.Scan() {
-				output <- message{
+				opts.output <- message{
 					path:   cmd.Path,
 					format: "%s\n",
 					args:   []any{scanner.Text()},
@@ -168,7 +152,7 @@ func runCommand(wg *sync.WaitGroup, opts cmdOptions, output chan message) {
 
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
-			output <- message{
+			opts.output <- message{
 				path:   cmd.Path,
 				format: "%s\n",
 				args:   []any{scanner.Text()},
@@ -182,7 +166,7 @@ func runCommand(wg *sync.WaitGroup, opts cmdOptions, output chan message) {
 			}
 		}
 
-		output <- message{
+		opts.output <- message{
 			path:   cmd.Path,
 			format: "exited with code %d\n",
 			args:   []any{cmd.ProcessState.ExitCode()},
@@ -197,6 +181,24 @@ func runCommand(wg *sync.WaitGroup, opts cmdOptions, output chan message) {
 		}
 
 		opts.retries--
+	}
+}
+
+func printOutput(output chan message, done chan bool) {
+	path := ""
+
+	for {
+		select {
+		case <-done:
+			return
+		case msg := <-output:
+			if msg.path != path {
+				path = msg.path
+				fmt.Printf("\n======== %s ========\n\n", path)
+			}
+
+			fmt.Printf(msg.format, msg.args...)
+		}
 	}
 }
 
