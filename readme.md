@@ -1,16 +1,20 @@
 ## Gather
 
-`gather` will execute multiple shell commands and gather their output to display in one terminal window. It will prepend the output of each command with a number identifying which command it came from. 
+Execute multiple shell commands and gather the output in one terminal window.
+
+![](https://drone.errorcode.io/api/badges/natewehr/gather/status.svg)
 
 ```
 $ gather --cmd 'ls -l' --cmd 'cat go.mod'
 ======== /bin/cat ========
+
 module github.com/nwehr/gather
 
 go 1.18
 exited with code 0
 
 ======== /bin/ls ========
+
 total 24
 -rw-r--r--  1 natewehr  staff    40 Jul 30 14:01 go.mod
 -rw-r--r--  1 natewehr  staff  1932 Aug  2 11:39 main.go
