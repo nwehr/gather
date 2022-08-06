@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestGetComandOptions(t *testing.T) {
@@ -57,19 +59,84 @@ func TestGetComandOptions(t *testing.T) {
 }
 
 func TestRunCommand(t *testing.T) {
-	opts := cmdOptions{
-		name: "echo",
-		args: []string{"hello"},
-		ctx:  context.Background(),
+	{
+		opts := cmdOptions{
+			name: "echo",
+			args: []string{"hello"},
+			ctx:  context.Background(),
+		}
+
+		output := make(chan message)
+
+		go runCommand(&sync.WaitGroup{}, output, opts)
+
+		msg := <-output
+
+		if strings.TrimSpace(fmt.Sprintf(msg.format, msg.args...)) != "hello" {
+			t.Errorf("expected 'hello', got '%s'", fmt.Sprintf(msg.format, msg.args...))
+		}
 	}
 
-	output := make(chan message)
+	{
+		opts := cmdOptions{
+			name: "sleep",
+			args: []string{"3"},
+			ctx:  context.Background(),
+		}
 
-	go runCommand(&sync.WaitGroup{}, output, opts)
+		output := make(chan message)
 
-	msg := <-output
+		wg := sync.WaitGroup{}
+		wg.Add(1)
 
-	if strings.TrimSpace(fmt.Sprintf(msg.format, msg.args...)) != "hello" {
-		t.Errorf("expected 'hello', got '%s'", fmt.Sprintf(msg.format, msg.args...))
+		start := time.Now()
+
+		go runCommand(&wg, output, opts)
+
+		<-output
+
+		wg.Wait()
+
+		stop := time.Now()
+
+		duration := stop.Sub(start).Seconds()
+
+		if math.Abs(duration-3.0) > 0.05 {
+			t.Errorf("expected sleep to run for 3 seconds, got %f", duration)
+		}
+	}
+
+	{
+		ctx, cancel := context.WithCancel(context.Background())
+
+		opts := cmdOptions{
+			name: "sleep",
+			args: []string{"5"},
+			ctx:  ctx,
+		}
+
+		output := make(chan message)
+
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+
+		start := time.Now()
+
+		go func(cancel context.CancelFunc) {
+			time.Sleep(time.Second)
+			cancel()
+		}(cancel)
+
+		go runCommand(&wg, output, opts)
+
+		wg.Wait()
+
+		stop := time.Now()
+
+		duration := stop.Sub(start).Seconds()
+
+		if math.Abs(duration-1.0) > 0.05 {
+			t.Errorf("expected cancel after 1 second, got %f", duration)
+		}
 	}
 }
