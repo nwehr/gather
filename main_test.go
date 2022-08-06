@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"sync"
 	"testing"
 )
 
@@ -50,5 +53,23 @@ func TestGetComandOptions(t *testing.T) {
 		if len(mv.args) != 2 {
 			t.Errorf("expected 2 args, got %d", len(mv.args))
 		}
+	}
+}
+
+func TestRunCommand(t *testing.T) {
+	opts := cmdOptions{
+		name: "echo",
+		args: []string{"hello"},
+		ctx:  context.Background(),
+	}
+
+	output := make(chan message)
+
+	go runCommand(&sync.WaitGroup{}, output, opts)
+
+	msg := <-output
+
+	if strings.TrimSpace(fmt.Sprintf(msg.format, msg.args...)) != "hello" {
+		t.Errorf("expected 'hello', got '%s'", fmt.Sprintf(msg.format, msg.args...))
 	}
 }
