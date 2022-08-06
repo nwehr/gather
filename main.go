@@ -32,8 +32,7 @@ type (
 		retries    int
 		retryDelay int
 
-		ctx    context.Context
-		output chan message
+		ctx context.Context
 	}
 )
 
@@ -49,13 +48,13 @@ func main() {
 	go printOutput(output, done)
 
 	ctx, _ := getContextWithCancel()
-	cmdOptions := getCommandOptions(ctx, output, os.Args[1:])
+	cmdOptions := getCommandOptions(ctx, os.Args[1:])
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(cmdOptions))
 
 	for _, opts := range cmdOptions {
-		go runCommand(&wg, opts)
+		go runCommand(&wg, output, opts)
 	}
 
 	wg.Wait()
@@ -75,7 +74,7 @@ func getContextWithCancel() (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
-func getCommandOptions(ctx context.Context, output chan message, args []string) []cmdOptions {
+func getCommandOptions(ctx context.Context, args []string) []cmdOptions {
 	cmds := []cmdOptions{}
 
 	dir := ""
@@ -107,7 +106,6 @@ func getCommandOptions(ctx context.Context, output chan message, args []string) 
 				retries:    retries,
 				retryDelay: retryDelay,
 				ctx:        ctx,
-				output:     output,
 			}
 
 			cmds = append(cmds, opts)
@@ -117,7 +115,7 @@ func getCommandOptions(ctx context.Context, output chan message, args []string) 
 	return cmds
 }
 
-func runCommand(wg *sync.WaitGroup, opts cmdOptions) {
+func runCommand(wg *sync.WaitGroup, output chan message, opts cmdOptions) {
 	defer wg.Done()
 
 	for {
@@ -142,7 +140,7 @@ func runCommand(wg *sync.WaitGroup, opts cmdOptions) {
 		go func() {
 			scanner := bufio.NewScanner(stderr)
 			for scanner.Scan() {
-				opts.output <- message{
+				output <- message{
 					path:   cmd.Path,
 					format: "%s\n",
 					args:   []any{scanner.Text()},
@@ -152,7 +150,7 @@ func runCommand(wg *sync.WaitGroup, opts cmdOptions) {
 
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
-			opts.output <- message{
+			output <- message{
 				path:   cmd.Path,
 				format: "%s\n",
 				args:   []any{scanner.Text()},
@@ -166,7 +164,7 @@ func runCommand(wg *sync.WaitGroup, opts cmdOptions) {
 			}
 		}
 
-		opts.output <- message{
+		output <- message{
 			path:   cmd.Path,
 			format: "exited with code %d\n",
 			args:   []any{cmd.ProcessState.ExitCode()},
