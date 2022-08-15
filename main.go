@@ -192,7 +192,7 @@ func printOutput(output chan message, done chan bool) {
 		case msg := <-output:
 			if msg.path != path {
 				path = msg.path
-				fmt.Printf("\n======== %s ========\n\n", path)
+				fmt.Printf("\n=======> %s <=======\n\n", path)
 			}
 
 			fmt.Printf(msg.format, msg.args...)
