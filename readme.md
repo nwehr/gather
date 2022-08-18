@@ -4,24 +4,6 @@ Execute multiple shell commands and gather the output in one terminal window.
 
 ![](https://drone.errorcode.io/api/badges/natewehr/gather/status.svg)
 
-```
-$ gather --cmd 'ls -l' --cmd 'cat go.mod'
-=======> /bin/cat <=======
-
-module github.com/nwehr/gather
-
-go 1.18
-exited with code 0
-
-=======> /bin/ls <=======
-
-total 24
--rw-r--r--  1 natewehr  staff    40 Jul 30 14:01 go.mod
--rw-r--r--  1 natewehr  staff  1932 Aug  2 11:39 main.go
--rw-r--r--  1 natewehr  staff   751 Jul 31 18:34 readme.md
-exited with code 0
-```
-
 ## Install
 ### MacOS
 
@@ -35,6 +17,36 @@ $ brew install gather
 $ git clone https://github.com/nwehr/gather
 $ cd gather
 $ make install
+```
+## Usage
+
+```
+$ gather --cmd "start_1.sh" --cmd "start_2.sh"
+
+=======> start_1.sh <=======
+
+Adding K to Every Word...
+Coupling Decouplers...
+Amending Laws of Physics...
+Ready...
+
+=======> start_2.sh <=======
+
+Pressing Red Button...
+Reinventing Wheel...
+Combobulating Discombobulator...
+Ready...
+
+```
+
+## Options
+
+```  
+--retries <retries>    Optional: Number of times to retry failed cmd
+--retry-delay <delay>  Optional: Wait time in ms before each retry
+--wait <delay>         Optional: Wait time in ms before cmd is started
+--dir | -d <dir>       Optional: Working dir of cmd
+--cmd | -c <cmd>
 ```
 
 ## YouTube
