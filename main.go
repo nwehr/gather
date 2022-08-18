@@ -31,6 +31,7 @@ type (
 		args       []string
 		retries    int
 		retryDelay int
+		wait       int
 
 		ctx context.Context
 	}
@@ -80,6 +81,7 @@ func getCommandOptions(ctx context.Context, args []string) []cmdOptions {
 	dir := ""
 	retries := 0
 	retryDelay := 0
+	wait := 0
 
 	for i, arg := range args {
 		switch arg {
@@ -87,8 +89,16 @@ func getCommandOptions(ctx context.Context, args []string) []cmdOptions {
 			retries, _ = strconv.Atoi(args[i+1])
 		case "--retry-delay":
 			retryDelay, _ = strconv.Atoi(args[i+1])
+		case "--wait":
+			wait, _ = strconv.Atoi(args[i+1])
+
+		case "-d":
+			fallthrough
 		case "--dir":
 			dir = args[i+1]
+
+		case "-c":
+			fallthrough
 		case "--cmd":
 			tokens := strings.Split(args[i+1], " ")
 
@@ -105,6 +115,7 @@ func getCommandOptions(ctx context.Context, args []string) []cmdOptions {
 				args:       args,
 				retries:    retries,
 				retryDelay: retryDelay,
+				wait:       wait,
 				ctx:        ctx,
 			}
 
@@ -130,6 +141,10 @@ func runCommand(wg *sync.WaitGroup, output chan message, opts cmdOptions) {
 		stderr, err := cmd.StderrPipe()
 		if err != nil {
 			fmt.Printf("could not get stdout pipe from %s: %v\n", cmd.String(), err)
+		}
+
+		if opts.wait > 0 {
+			time.Sleep(time.Duration(opts.wait) * time.Millisecond)
 		}
 
 		err = cmd.Start()
@@ -209,8 +224,9 @@ func showUsage() {
 	fmt.Println("Options:")
 	fmt.Println("  --retries <retries>    Optional: Number of times to retry failed cmd")
 	fmt.Println("  --retry-delay <delay>  Optional: Wait time in ms before each retry")
-	fmt.Println("  --dir <dir>            Optional: Working dir of cmd")
-	fmt.Println("  --cmd <cmd>")
+	fmt.Println("  --wait <delay>         Optional: Wait time in ms before cmd is started")
+	fmt.Println("  --dir | -d <dir>       Optional: Working dir of cmd")
+	fmt.Println("  --cmd | -c <cmd>")
 	fmt.Println()
 
 	fmt.Println("Usage:")
