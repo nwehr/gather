@@ -1,6 +1,4 @@
 COMMIT := $(shell git rev-parse --short=8 HEAD)
-BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
-BUILD_DATE := $(shell date '+%Y-%m-%d %H:%M:%S')
 GOPATH := $(shell go env GOPATH)
 TARGET := gather
 
@@ -8,7 +6,7 @@ TARGET := gather
 
 all: 
 	go build \
-		-ldflags="-X 'main.commit=${COMMIT}' -X 'main.built=${BUILD_DATE}' -X 'main.branch=${BRANCH}'" \
+		-ldflags="-X 'main.version=${COMMIT}'" \
 		-o \
 		${TARGET} main.go
 

@@ -14,8 +14,7 @@ import (
 )
 
 var (
-	commit string
-	built  string
+	version string
 )
 
 type (
@@ -217,8 +216,7 @@ func printOutput(output chan message, done chan bool) {
 
 func showUsage() {
 	fmt.Println("gather:")
-	fmt.Printf("  version: %s\n", commit)
-	fmt.Printf("  build:   %s\n", built)
+	fmt.Printf("  version: %s\n", version)
 	fmt.Println()
 
 	fmt.Println("Options:")
