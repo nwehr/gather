@@ -1,24 +1,9 @@
-## Gather
-
-Execute multiple shell commands and gather the output in one terminal window.
+# Gather
 
 ![](https://drone.errorcode.io/api/badges/natewehr/gather/status.svg)
 
-## Install
-### MacOS
+Execute multiple shell commands and gather the output in one terminal window. 
 
-```
-$ brew tap nwehr/tap
-$ brew install gather
-```
-### Linux
-
-```
-$ git clone https://github.com/nwehr/gather
-$ cd gather
-$ make install
-```
-## Usage
 
 ```
 $ gather --cmd "start_1.sh" --cmd "start_2.sh"
@@ -39,7 +24,23 @@ Ready...
 
 ```
 
-## Options
+# Install
+### MacOS
+
+```
+$ brew tap nwehr/tap
+$ brew install gather
+```
+### Linux
+
+```
+$ git clone https://github.com/nwehr/gather
+$ cd gather
+$ make install
+```
+
+
+# Options
 
 ```  
 --retries <retries>    Optional: Number of times to retry failed cmd
@@ -49,9 +50,16 @@ Ready...
 --cmd | -c <cmd>
 ```
 
-## YouTube
+# Donate
 
-I documented the process of building `gather` on youtube. 
+Bitcoin (BTC)
 
-* [#1 gather dev vlog!](https://www.youtube.com/watch?v=s8CkL0WU1s0)
-* [#2 gather dev vlog!](https://www.youtube.com/watch?v=2FIvfAAPDOg)
+```
+bc1qkm8gm3ggu8s4lnnc8mp0fahksp23u965hp758c
+```
+
+Ravencoin (RVN)
+
+```
+RSm7jfUjynsVptGyEDaW5yShiXbKBPsHNm
+```
